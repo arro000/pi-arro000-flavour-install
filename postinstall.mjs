@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { constants } from 'node:fs';
-import { access, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const windows = process.platform === 'win32';
@@ -64,6 +64,21 @@ export async function installCommands({ agent, tools, fnm, pi, npmInstall, termu
     if (userPath(tools, 'add') === 'added') state.windowsPath = true;
   } else {
     const home = homedir();
+    const userBin = join(home, '.local', 'bin');
+    if ((process.env.PATH || '').split(delimiter).some(path => path && resolve(path) === userBin)) {
+      await mkdir(userBin, { recursive: true });
+      for (const name of ['pi', 'pi-flavour-uninstall']) {
+        const link = join(userBin, name);
+        const target = join(tools, name);
+        try { await symlink(target, link); }
+        catch (error) {
+          if (error.code !== 'EEXIST') throw error;
+          continue;
+        }
+        (state.links ??= []).push({ link, target });
+        await save();
+      }
+    }
     const bashLogin = await firstExisting(['.bash_profile', '.bash_login', '.profile'].map(file => join(home, file)));
     const files = [join(home, '.bashrc'), bashLogin ?? join(home, '.profile')];
     if (process.env.SHELL?.endsWith('/zsh')) files.push(join(process.env.ZDOTDIR || home, '.zshrc'));
@@ -112,6 +127,12 @@ async function uninstall() {
     const before = await read(path);
     const after = before.split('\n').filter(value => value !== line).join('\n');
     if (before !== after) await writeFile(path, after);
+  }
+  for (const { link, target } of state.links ?? []) {
+    const current = await readlink(link).catch(error => {
+      if (!['ENOENT', 'EINVAL'].includes(error.code)) throw error;
+    });
+    if (current === target) await rm(link, { force: true });
   }
   await rm(launcher, { force: true });
   for (const file of ['rtk', 'rtk.exe', 'pi-flavour-uninstall', 'pi-flavour-uninstall.cmd', 'uninstall.mjs', '.flavour.json']) {

@@ -75,7 +75,7 @@ pkg install -y git &&
   bash pi-arro000-flavour-install/install.sh
 ```
 
-Termux uses its native `nodejs` and `npm` packages instead of fnm. Windows and Termux install Pi in a dedicated npm prefix without replacing other Pi binaries. The installer adds its launcher directory to Bash and Zsh startup files or to the Windows user PATH. Open a new shell to pick it up. RTK has no upstream Android binary; Termux can use an existing `rtk` on `PATH` if you have one. Other native extensions may also have platform-specific limits.
+Termux uses its native `nodejs` and `npm` packages instead of fnm. Windows and Termux install Pi in a dedicated npm prefix without replacing other Pi binaries. The installer adds its launcher directory to Bash and Zsh startup files or to the Windows user PATH. On Linux and macOS, if `~/.local/bin` is already on `PATH`, the installer also links the commands there without replacing existing files. Open a new shell if `pi` is not found. For direct SBX execution without shell startup files, use `sbx exec <sandbox> pi --version` when `~/.local/bin` is on the sandbox PATH, or use the absolute launch path printed by the installer. RTK has no upstream Android binary; Termux can use an existing `rtk` on `PATH` if you have one. Other native extensions may also have platform-specific limits.
 
 ## Updating
 

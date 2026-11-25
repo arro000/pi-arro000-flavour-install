@@ -236,5 +236,5 @@ try {
 if (!process.exitCode) {
   const launch = join(tools, windows ? 'pi.cmd' : 'pi');
   process.stdout.write(`[100%] Pi and ${packages.length} packages ready.\n`);
-  process.stdout.write(`Open a new shell and run pi, or launch directly: ${launch}\n`);
+  process.stdout.write(`Run pi (open a new shell if needed), or launch directly: ${launch}\n`);
 }

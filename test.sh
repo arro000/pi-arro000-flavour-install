@@ -5,7 +5,7 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 node_bin=$(command -v node)
 export MOCK_NODE="$work/bin/node" HOME="$work/home" PI_CODING_AGENT_DIR="$work/home/.pi/agent" TERM=dumb
-export FNM_DIR="$work/fnm" PATH="$work/bin:/usr/bin:/bin"
+export FNM_DIR="$work/fnm" PATH="$work/bin:$HOME/.local/bin:/usr/bin:/bin"
 export PI_MANAGED_INSTALL_ROOT="$work/other-install"
 mkdir -p "$work/bin" "$PI_CODING_AGENT_DIR"
 ln -s "$node_bin" "$MOCK_NODE"
@@ -207,9 +207,12 @@ MOCK
 fi
 [[ $(bash -ic 'command -v pi' 2>/dev/null) == "$PI_CODING_AGENT_DIR/flavour-bin/pi" ]]
 grep -Fq 'pi-arro000-flavour' "$HOME/.bashrc"
+[[ $(command -v pi) == "$HOME/.local/bin/pi" ]]
+[[ $(command -v pi-flavour-uninstall) == "$HOME/.local/bin/pi-flavour-uninstall" ]]
 "$PI_CODING_AGENT_DIR/flavour-bin/pi" --version | grep -Fxq 9.8.7
 "$PI_CODING_AGENT_DIR/flavour-bin/pi-flavour-uninstall" > "$work/log" 2>&1 || { cat "$work/log"; exit 1; }
 [[ $(wc -l < "$HOME/removed") -eq 22 ]]
+[[ ! -L $HOME/.local/bin/pi && ! -L $HOME/.local/bin/pi-flavour-uninstall ]]
 [[ ! -e $PI_CODING_AGENT_DIR/install && ! -e $PI_CODING_AGENT_DIR/bin/pi ]]
 [[ -f $PI_CODING_AGENT_DIR/settings.json && -x $FNM_DIR/fnm ]]
 ! grep -Fq 'pi-arro000-flavour' "$HOME/.bashrc"
@@ -246,5 +249,5 @@ MOCK
 bash install.sh > "$work/log" 2>&1 || { cat "$work/log"; exit 1; }
 [[ $(tail -n 1 "$HOME/actions") == termux-node ]]
 [[ $(wc -l < "$HOME/termux-packages") -eq 22 ]]
-grep -Fq 'Open a new shell and run pi' "$work/log"
+grep -Fq 'Run pi (open a new shell if needed)' "$work/log"
 printf 'Termux bootstrap test passed.\n'

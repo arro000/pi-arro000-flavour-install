@@ -106,6 +106,7 @@ assert.deepEqual(pi.packages, ['keep']);
 assert.equal(pi.custom, true);
 assert.equal(read('open-tui.json').toolView.mode, 'compact');
 assert.equal(read('open-tui.json').toolView.custom, true);
+assert.deepEqual(read('extensions/pi-rtk-optimizer/config.json'), JSON.parse(readFileSync('rtk-settings.json')));
 assert.match(torus(0, 0).join(''), /\./);
 assert.doesNotMatch(torus(0, 1).join(''), /\./);
 assert.notDeepEqual(torus(0, 1), torus(1, 1));
@@ -122,6 +123,9 @@ settings.packages[0] = { source: `${settings.packages[0]}@1.2.3`, extensions: []
 writeFileSync(path, JSON.stringify(settings));
 writeFileSync(`${dir}/open-tui.json`, '{"header":true}');
 JS
+rtk_config="$PI_CODING_AGENT_DIR/extensions/pi-rtk-optimizer/config.json"
+printf '%s\n' '{"mode":"rewrite","outputCompaction":{"compactGitOutput":true,"custom":true}}' > "$rtk_config"
+cp "$rtk_config" "$work/rtk-before"
 cp "$PI_CODING_AGENT_DIR/settings.json" "$work/pi-before"
 cp "$PI_CODING_AGENT_DIR/open-tui.json" "$work/tui-before"
 rm "$HOME/packages"
@@ -133,6 +137,32 @@ grep -Fxq 'install npm:pi-intercom' "$HOME/packages"
 [[ $(grep -c '^install ' "$HOME/packages") -eq 1 ]]
 cmp "$work/pi-before" "$PI_CODING_AGENT_DIR/settings.json"
 cmp "$work/tui-before" "$PI_CODING_AGENT_DIR/open-tui.json"
+cmp "$rtk_config" "$work/rtk-before"
+
+# Simulate TTY detection while feeding answers through a pipe.
+cat > "$work/tty-mock.mjs" <<'MOCK'
+Object.defineProperty(process.stdin, 'isTTY', { value: true });
+Object.defineProperty(process.stderr, 'isTTY', { value: true });
+MOCK
+for answer in '' yes; do
+  printf '%s\n' "$answer" | NODE_OPTIONS="$NODE_OPTIONS --import=$work/tty-mock.mjs" bash install.sh > "$work/log" 2>&1
+  grep -Fq 'Apply the bundled RTK and Open TUI presets?' "$work/log"
+  cmp "$work/pi-before" "$PI_CODING_AGENT_DIR/settings.json"
+  if [[ -z $answer ]]; then
+    cmp "$work/tui-before" "$PI_CODING_AGENT_DIR/open-tui.json"
+    cmp "$work/rtk-before" "$rtk_config"
+  fi
+done
+"$node_bin" --input-type=module <<'JS'
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const read = file => JSON.parse(readFileSync(`${process.env.PI_CODING_AGENT_DIR}/${file}`));
+const rtk = read('extensions/pi-rtk-optimizer/config.json');
+assert.equal(rtk.mode, 'suggest');
+assert.equal(rtk.outputCompaction.compactGitOutput, false);
+assert.equal(rtk.outputCompaction.custom, true);
+assert.equal(read('open-tui.json').header, false);
+JS
 rm "$HOME/packages"
 status=0
 FAIL_PACKAGE=npm:pi-goal-x bash install.sh > "$work/log" 2>&1 || status=$?

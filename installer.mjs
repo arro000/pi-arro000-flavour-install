@@ -29,11 +29,11 @@ const screen = process.stderr;
 const animated = screen.isTTY && process.env.TERM !== 'dumb' && screen.columns >= 68 && screen.rows >= 16;
 let total = packages.length + 3;
 const lines = [];
-let child, interrupted, frame = 0, done = 0;
+let child, interrupted, prompt, frame = 0, done = 0;
 
 function log(line) {
   line = stripVTControlCharacters(line).replace(/[^ -~]/g, ' ');
-  if (!animated) screen.write(`${line}\n`);
+  if (!timer) screen.write(`${line}\n`);
   lines.push(line);
   if (lines.length > 25) lines.shift();
 }
@@ -53,6 +53,7 @@ function draw() {
 for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
   process.on(signal, () => {
     interrupted = code;
+    prompt?.close();
     if (child?.pid) {
       try { if (windows) child.kill(signal); else process.kill(-child.pid, signal); }
       catch (error) { if (error.code !== 'ESRCH') log(error.message); }
@@ -131,18 +132,42 @@ function npmSources(settings) {
   }));
 }
 
+async function confirmPresets() {
+  if (!process.stdin.isTTY || !screen.isTTY) return false;
+  prompt = createInterface({ input: process.stdin, output: screen });
+  try {
+    const answer = await new Promise(resolve => {
+      prompt.once('close', () => resolve(''));
+      prompt.once('SIGINT', () => { interrupted = 130; prompt.close(); });
+      prompt.question('Apply the bundled RTK and Open TUI presets? Matching settings will be replaced. [y/N] ', resolve);
+    });
+    return /^y(?:es)?$/i.test(answer.trim());
+  } finally {
+    prompt.close();
+    prompt = undefined;
+  }
+}
+
 let timer;
 try {
-  if (animated) {
-    screen.write('\x1b[?1049h\x1b[?25l');
-    draw();
-    timer = setInterval(draw, 100);
-  }
   const configured = npmSources(await settings(join(agent, 'settings.json')));
   const tui = join(agent, 'open-tui.json');
-  await settings(tui);
+  const rtkSettings = join(agent, 'extensions', 'pi-rtk-optimizer', 'config.json');
   const initialized = existsSync(tui) && configured.has('npm:pi-open-tui') && configured.has('npm:@arro000/pi-monokai-contrast');
-  if (initialized) total--;
+  const updating = managed || existsSync(pi) || initialized;
+  const applyPresets = !updating || await confirmPresets();
+  if (interrupted) throw new Error('Installation interrupted');
+  if (!applyPresets) total--;
+  await settings(tui);
+  const applyRtk = applyPresets && (updating || !(await lstat(rtkSettings).catch(error => {
+    if (error.code !== 'ENOENT') throw error;
+  })));
+  if (applyRtk) await settings(rtkSettings);
+  if (animated) {
+    screen.write('\x1b[?1049h\x1b[?25l');
+    timer = setInterval(draw, 100);
+    draw();
+  }
   const piStep = npmInstall ? 'Install or update Pi via npm' : managed ? 'Update managed Pi' : 'Install Pi';
   await step(piStep, async () => {
     if (npmInstall) {
@@ -170,17 +195,21 @@ try {
     await step(`${existing ? 'Update' : 'Install'} ${source}`,
       () => runPi([existing ? 'update' : 'install', existing ?? source, '--no-approve']));
   }
-  if (!initialized) await step('Apply Pi and Open TUI settings', async () => {
+  if (applyPresets) await step('Apply configuration presets', async () => {
     await mkdir(agent, { recursive: true });
-    await apply(join(agent, 'settings.json'), await bundled('pi-settings.json'));
-    await apply(join(agent, 'open-tui.json'), await bundled('open-tui.json'));
+    if (!updating) await apply(join(agent, 'settings.json'), await bundled('pi-settings.json'));
+    await apply(tui, await bundled('open-tui.json'));
+    if (applyRtk) {
+      await mkdir(dirname(rtkSettings), { recursive: true });
+      await apply(rtkSettings, await bundled('rtk-settings.json'));
+    }
   });
   if (animated) { draw(); await delay(350); }
 } catch (error) {
   log(error.message);
   process.exitCode = Number.isInteger(error.code) && error.code > 0 ? error.code : 1;
 } finally {
-  if (animated) {
+  if (timer) {
     clearInterval(timer);
     screen.write('\x1b[?25h\x1b[?1049l');
     screen.write(`${lines.join('\n')}\n`);

@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "mode": "suggest",
+  "outputCompaction": {
+    "enabled": true,
+    "aggregateTestOutput": true,
+    "filterBuildOutput": true,
+    "aggregateLinterOutput": true,
+    "compactGitOutput": false,
+    "groupSearchOutput": false,
+    "readCompaction": { "enabled": false },
+    "sourceCodeFilteringEnabled": false,
+    "truncate": { "enabled": false }
+  }
+}

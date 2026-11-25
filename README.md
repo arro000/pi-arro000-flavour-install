@@ -12,7 +12,7 @@
 - **Hands-off setup:** installs Node.js and Pi without prompts, using [fnm](https://github.com/Schniz/fnm) on desktop and Termux packages on Android.
 - **Live progress:** a rotating ASCII torus fills as each step completes, alongside live logs. Small or redirected terminals get plain text.
 - **Curated setup:** installs [22 Pi packages](packages.json), including `pi-intercom`, and applies the [Pi](pi-settings.json) and [Open TUI](open-tui.json) presets.
-- **RTK:** installs the [RTK OSS](https://github.com/rtk-ai/rtk) binary on supported desktop systems for `pi-rtk-optimizer`.
+- **RTK:** installs the [RTK OSS](https://github.com/rtk-ai/rtk) binary on supported desktop systems for `pi-rtk-optimizer`. The [RTK preset](rtk-settings.json) compacts build, test and lint output without rewriting commands or compacting file reads.
 
 ## Requirements
 
@@ -73,7 +73,7 @@ Termux uses its native `nodejs` and `npm` packages instead of fnm. Windows and T
 
 ## Updating
 
-Close Pi and rerun the same installer command. It updates Pi, RTK where supported, and the configured flavour extensions, and installs only missing entries. It does not reapply the presets to an existing flavour setup or update unrelated extensions.
+Close Pi and rerun the same installer command. It updates Pi, RTK where supported, and the configured flavour extensions, and installs only missing entries. In an interactive terminal, you can opt in to reapplying the RTK and Open TUI presets. The default is **No**, and non-interactive updates skip the presets. The Pi preset is not reapplied during updates, and unrelated extensions are not updated.
 
 ## Quick start
 
@@ -83,7 +83,7 @@ Close Pi and rerun the same installer command. It updates Pi, RTK where supporte
 
 ## Privacy and safety
 
-Close Pi before running the installer. On first setup, the presets replace matching settings and keep unrelated values. No credentials, sessions, device IDs or trust decisions are bundled. Sign in separately with `/login`; access to the configured model depends on your account. Review the package list first: Pi extensions can execute code. A failed run stops without rolling back completed steps.
+Close Pi before running the installer. Presets replace matching keys and keep unrelated values. First-time setup preserves an existing RTK configuration. No credentials, sessions, device IDs or trust decisions are bundled. Sign in separately with `/login`; access to the configured model depends on your account. Review the package list first: Pi extensions can execute code. A failed run stops without rolling back completed steps.
 
 ## Development
 

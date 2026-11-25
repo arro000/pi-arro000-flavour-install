@@ -5,6 +5,6 @@
   "license": "MIT",
   "repository": "github:arro000/pi-arro000-flavour-install",
   "bin": "./launch.mjs",
-  "files": ["launch.mjs", "install.sh", "install.ps1", "installer.mjs", "torus.mjs", "rtk.mjs", "packages.json", "pi-settings.json", "open-tui.json", "rtk-settings.json"],
+  "files": ["launch.mjs", "install.sh", "install.ps1", "installer.mjs", "postinstall.mjs", "torus.mjs", "rtk.mjs", "packages.json", "pi-settings.json", "open-tui.json", "rtk-settings.json"],
   "scripts": { "test": "bash test.sh" }
 }

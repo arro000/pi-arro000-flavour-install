@@ -75,15 +75,25 @@ pkg install -y git &&
   bash pi-arro000-flavour-install/install.sh
 ```
 
-Termux uses its native `nodejs` and `npm` packages instead of fnm. Windows and Termux install Pi in a dedicated npm prefix without replacing other Pi binaries. Shell profiles are not modified. RTK has no upstream Android binary; Termux can use an existing `rtk` on `PATH` if you have one. Other native extensions may also have platform-specific limits.
+Termux uses its native `nodejs` and `npm` packages instead of fnm. Windows and Termux install Pi in a dedicated npm prefix without replacing other Pi binaries. The installer adds its launcher directory to Bash and Zsh startup files or to the Windows user PATH. Open a new shell to pick it up. RTK has no upstream Android binary; Termux can use an existing `rtk` on `PATH` if you have one. Other native extensions may also have platform-specific limits.
 
 ## Updating
 
 Close Pi and rerun the same installer command. It updates Pi, RTK where supported, and the configured flavour extensions, and installs only missing entries. In an interactive terminal, you can opt in to reapplying the RTK and Open TUI presets. The default is **No**, and non-interactive updates skip the presets. The Pi preset is not reapplied during updates, and unrelated extensions are not updated.
 
+## Uninstall
+
+Close Pi, then run:
+
+```sh
+pi-flavour-uninstall
+```
+
+This removes the launchers, RTK, the extensions added by tracked installations, and Pi itself if the flavour installed it from scratch. Settings, sessions, credentials, older untracked installations, and shared dependencies such as fnm, Node.js and system packages are kept.
+
 ## Quick start
 
-1. Run the launch command printed by the installer so Pi can find RTK.
+1. Open a new shell and run `pi`. In the current shell, use the launcher path printed by the installer.
 2. Run `/login` to connect a provider, then `/model` to select an available model.
 3. Run `/rtk verify` to check RTK. With two Pi sessions open, use `/intercom` to pick a session and send a message. Incoming messages can trigger a turn by default.
 

@@ -6,6 +6,7 @@ import { delimiter, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { stripVTControlCharacters } from 'node:util';
+import { installCommands, ownership } from './postinstall.mjs';
 import { setupRtk } from './rtk.mjs';
 import { height, torus } from './torus.mjs';
 
@@ -27,7 +28,7 @@ const env = { ...process.env, PATH: `${tools}${delimiter}${join(agent, 'bin')}${
 delete env.PI_MANAGED_INSTALL_ROOT;
 const screen = process.stderr;
 const animated = screen.isTTY && process.env.TERM !== 'dumb' && screen.columns >= 68 && screen.rows >= 16;
-let total = packages.length + 3;
+let total = packages.length + 4;
 const lines = [];
 let child, interrupted, prompt, frame = 0, done = 0;
 
@@ -168,6 +169,12 @@ try {
     timer = setInterval(draw, 100);
     draw();
   }
+  const existingPiOnPath = (process.env.PATH || '').split(delimiter).some(path =>
+    path && existsSync(join(path, windows ? 'pi.cmd' : 'pi')));
+  const { state, save } = await ownership(tools, !updating && (npmInstall || !existingPiOnPath));
+  state.pi = pi;
+  state.npmInstall = npmInstall;
+  await save();
   const piStep = npmInstall ? 'Install or update Pi via npm' : managed ? 'Update managed Pi' : 'Install Pi';
   await step(piStep, async () => {
     if (npmInstall) {
@@ -193,7 +200,13 @@ try {
   for (const source of packages) {
     const existing = configured.get(source);
     await step(`${existing ? 'Update' : 'Install'} ${source}`,
-      () => runPi([existing ? 'update' : 'install', existing ?? source, '--no-approve']));
+      async () => {
+        await runPi([existing ? 'update' : 'install', existing ?? source, '--no-approve']);
+        if (!existing && !state.packages.includes(source)) {
+          state.packages.push(source);
+          await save();
+        }
+      });
   }
   if (applyPresets) await step('Apply configuration presets', async () => {
     await mkdir(agent, { recursive: true });
@@ -204,6 +217,9 @@ try {
       await apply(rtkSettings, await bundled('rtk-settings.json'));
     }
   });
+  await step('Set up pi and pi-flavour-uninstall commands', () => installCommands({
+    agent, tools, fnm: process.argv[2], pi, npmInstall, termux, state, save
+  }));
   if (animated) { draw(); await delay(350); }
 } catch (error) {
   log(error.message);
@@ -218,13 +234,7 @@ try {
 }
 
 if (!process.exitCode) {
-  const quote = value => "'" + value.replaceAll("'", windows ? "''" : "'\"'\"'") + "'";
-  let launch = `node ${quote(pi)}`;
-  if (!termux) {
-    const fnm = quote(process.argv[2]);
-    launch = `${windows ? '& ' : ''}${fnm} exec --using=default ${windows ? 'node ' : ''}${quote(pi)}`;
-  }
-  launch = windows ? `$env:Path = ${quote(`${tools};`)} + $env:Path; ${launch}`
-    : `PATH=${quote(tools)}:"$PATH" ${launch}`;
-  process.stdout.write(`[100%] Pi and ${packages.length} packages ready.\nLaunch: ${launch}\n`);
+  const launch = join(tools, windows ? 'pi.cmd' : 'pi');
+  process.stdout.write(`[100%] Pi and ${packages.length} packages ready.\n`);
+  process.stdout.write(`Open a new shell and run pi, or launch directly: ${launch}\n`);
 }

@@ -58,6 +58,10 @@ case "$*" in
     exit 127
   fi
   echo "$MOCK_NODE" ;;
+exec\ --using=default\ *)
+  shift 2
+  if [ "$1" = node ]; then shift; exec "$MOCK_NODE" "$@"; fi
+  exec "$@" ;;
 *) exit 93 ;;
 esac
 FNM
@@ -81,6 +85,7 @@ if [ "$*" = 'update --self --no-approve' ]; then
   printf 'update\n' >> "$HOME/actions"
   exit
 fi
+if [ "$1" = remove ]; then printf '%s\n' "$2" >> "$HOME/removed"; exit; fi
 { [ "$1" = install ] || [ "$1" = update ]; } && [ "$3" = --no-approve ] || exit 91
 [ "$(rtk --version)" = 'rtk 1.2.3' ]
 printf '%s %s\n' "$1" "$2" >> "$HOME/packages"
@@ -200,6 +205,14 @@ MOCK
   grep -Fq '[100%] Pi and 22 packages ready.' "$work/log"
   [[ $(cat "$HOME/sudo-actions") == $'apt-get update\napt-get install -y libatomic1' ]]
 fi
+[[ $(bash -ic 'command -v pi' 2>/dev/null) == "$PI_CODING_AGENT_DIR/flavour-bin/pi" ]]
+grep -Fq 'pi-arro000-flavour' "$HOME/.bashrc"
+"$PI_CODING_AGENT_DIR/flavour-bin/pi" --version | grep -Fxq 9.8.7
+"$PI_CODING_AGENT_DIR/flavour-bin/pi-flavour-uninstall" > "$work/log" 2>&1 || { cat "$work/log"; exit 1; }
+[[ $(wc -l < "$HOME/removed") -eq 22 ]]
+[[ ! -e $PI_CODING_AGENT_DIR/install && ! -e $PI_CODING_AGENT_DIR/bin/pi ]]
+[[ -f $PI_CODING_AGENT_DIR/settings.json && -x $FNM_DIR/fnm ]]
+! grep -Fq 'pi-arro000-flavour' "$HOME/.bashrc"
 printf 'Installer tests passed.\n'
 
 # Model Termux's pkg + npm layout without installing anything on the host.
@@ -233,5 +246,5 @@ MOCK
 bash install.sh > "$work/log" 2>&1 || { cat "$work/log"; exit 1; }
 [[ $(tail -n 1 "$HOME/actions") == termux-node ]]
 [[ $(wc -l < "$HOME/termux-packages") -eq 22 ]]
-grep -Eq '^Launch: PATH=.* node ' "$work/log"
+grep -Fq 'Open a new shell and run pi' "$work/log"
 printf 'Termux bootstrap test passed.\n'

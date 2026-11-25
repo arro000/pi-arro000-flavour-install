@@ -54,6 +54,30 @@ version=$("$fnm" list-remote </dev/null | awk '$1 ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ 
 [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Could not resolve the latest Node.js release.' >&2; exit 1; }
 "$fnm" install "$version" </dev/null
 "$fnm" default "$version" </dev/null
-node_bin=$("$fnm" exec --using=default node -p 'process.execPath')
+node_error=$(mktemp)
+trap 'rm -f -- "$node_error"' EXIT
+if ! node_bin=$("$fnm" exec --using=default node -p 'process.execPath' 2>"$node_error"); then
+  cat "$node_error" >&2
+  if [[ $(uname -s) == Linux ]] && grep -Fq 'libatomic.so.1: cannot open shared object file' "$node_error"; then
+    if command -v sudo >/dev/null && command -v apt-get >/dev/null; then
+      echo 'Node.js is missing libatomic.so.1. Installing libatomic1 with sudo; enter your password if prompted.' >&2
+      if ! sudo apt-get update || ! sudo apt-get install -y libatomic1; then
+        echo 'Could not install libatomic1 automatically. Install it inside this environment and retry.' >&2
+        exit 1
+      fi
+      node_bin=$("$fnm" exec --using=default node -p 'process.execPath')
+    else
+      echo 'Install libatomic1 (Debian/Ubuntu) or libatomic (Fedora) inside this environment, then retry.' >&2
+      exit 1
+    fi
+  else
+    echo 'Could not start the Node.js binary installed by fnm.' >&2
+    exit 1
+  fi
+else
+  cat "$node_error" >&2
+fi
+rm -f -- "$node_error"
+trap - EXIT
 export PATH="$(dirname -- "$node_bin"):$PATH"
 exec "$node_bin" "$dir/installer.mjs" "$fnm"

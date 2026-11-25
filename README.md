@@ -44,6 +44,12 @@ Run in Bash (`tar` required):
 )
 ```
 
+On Debian/Ubuntu (including Debian-based SBX images), if Node cannot find `libatomic.so.1`, the installer announces the fallback and uses `sudo` to install `libatomic1`. Enter your password if prompted. If `sudo` is unavailable or not permitted, run this inside the container as root, then retry the installer as a regular user:
+
+```sh
+apt-get update && apt-get install -y libatomic1
+```
+
 ### Native Windows
 
 Run in PowerShell:

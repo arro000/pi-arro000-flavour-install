@@ -52,7 +52,12 @@ case "$*" in
 'list-remote') printf '%s\n' 'v24.1.0 (Example)' 'v26.13.0' 'v27.0.0-alpha.1' ;;
 'install v26.13.0') echo node-install >> "$HOME/actions" ;;
 'default v26.13.0') echo node-default >> "$HOME/actions" ;;
-'exec --using=default node -p process.execPath') echo "$MOCK_NODE" ;;
+'exec --using=default node -p process.execPath')
+  if [ "${FAIL_NODE:-}" ] && [ ! -f "$HOME/libatomic-installed" ]; then
+    echo 'libatomic.so.1: cannot open shared object file' >&2
+    exit 127
+  fi
+  echo "$MOCK_NODE" ;;
 *) exit 93 ;;
 esac
 FNM
@@ -173,6 +178,28 @@ status=0
 bash install.sh > "$work/log" 2>&1 || status=$?
 [[ $status -eq 1 && $(tail -n 1 "$HOME/actions") == node-default ]]
 grep -Fxq 'not JSON' "$PI_CODING_AGENT_DIR/open-tui.json"
+if [[ $(uname -s) == Linux ]]; then
+  cat > "$work/bin/sudo" <<'MOCK'
+#!/bin/sh
+printf '%s\n' "$*" >> "$HOME/sudo-actions"
+[ -z "${FAIL_SUDO:-}" ] || exit 1
+case "$*" in
+  'apt-get update') ;;
+  'apt-get install -y libatomic1') touch "$HOME/libatomic-installed" ;;
+  *) exit 1 ;;
+esac
+MOCK
+  cp "$work/bin/sudo" "$work/bin/apt-get"
+  chmod +x "$work/bin/sudo" "$work/bin/apt-get"
+  cp "$work/tui-before" "$PI_CODING_AGENT_DIR/open-tui.json"
+  if FAIL_NODE=1 FAIL_SUDO=1 bash install.sh > "$work/log" 2>&1; then exit 1; fi
+  grep -Fq 'Could not install libatomic1 automatically.' "$work/log"
+  : > "$HOME/sudo-actions"
+  FAIL_NODE=1 bash install.sh > "$work/log" 2>&1
+  grep -Fq 'Installing libatomic1 with sudo' "$work/log"
+  grep -Fq '[100%] Pi and 22 packages ready.' "$work/log"
+  [[ $(cat "$HOME/sudo-actions") == $'apt-get update\napt-get install -y libatomic1' ]]
+fi
 printf 'Installer tests passed.\n'
 
 # Model Termux's pkg + npm layout without installing anything on the host.

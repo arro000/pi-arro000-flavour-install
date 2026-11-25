@@ -19,6 +19,33 @@ preference.addEventListener('change', () => animate(!preference.matches));
 if (!preference.matches) draw();
 animate(!preference.matches);
 
+for (const code of document.querySelectorAll('.guide pre > code')) {
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.className = 'copy-command';
+  copy.textContent = 'Copy';
+  copy.setAttribute('aria-label', 'Copy commands');
+  const status = document.createElement('span');
+  status.className = 'copy-status';
+  status.setAttribute('role', 'status');
+  code.parentElement.after(copy, status);
+
+  copy.addEventListener('click', async () => {
+    status.textContent = '';
+    try {
+      await navigator.clipboard.writeText(code.textContent);
+      status.textContent = 'Copied!';
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(code);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      status.textContent = 'Copy unavailable. Commands selected for manual copy.';
+    }
+  });
+}
+
 const list = document.querySelector('#packages');
 try {
   const response = await fetch('./packages.json');

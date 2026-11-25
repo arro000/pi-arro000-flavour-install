@@ -22,7 +22,7 @@ Linux or macOS, a regular user account, internet access, Bash and `curl`. Instal
 If `npx` is already available (requires Git; runs directly from GitHub, not the npm registry):
 
 ```sh
-npx --yes github:arro000/pi-arro000-flavour-install
+npx --yes --allow-git=all github:arro000/pi-arro000-flavour-install
 ```
 
 Without Node or npm, download and extract the [source archive](https://github.com/arro000/pi-arro000-flavour-install/archive/refs/heads/main.tar.gz), then run this from the extracted directory:

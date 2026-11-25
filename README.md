@@ -25,10 +25,18 @@ If `npx` is already available (requires Git; runs directly from GitHub, not the 
 npx --yes --allow-git=all github:arro000/pi-arro000-flavour-install
 ```
 
-Without Node or npm, download and extract the [source archive](https://github.com/arro000/pi-arro000-flavour-install/archive/refs/heads/main.tar.gz), then run this from the extracted directory:
+Without Node or npm (requires `tar`):
 
 ```sh
-bash install.sh
+(
+  set -e
+  work=$(mktemp -d)
+  trap 'rm -rf "$work"' EXIT
+  curl -fsSL https://github.com/arro000/pi-arro000-flavour-install/archive/refs/heads/main.tar.gz \
+    -o "$work/source.tar.gz"
+  tar -xzf "$work/source.tar.gz" -C "$work"
+  bash "$work/pi-arro000-flavour-install-main/install.sh"
+)
 ```
 
 Use the launch command printed at the end. Shell profiles are not modified. Run the installer again to update managed Pi. If an unsupported Pi installation blocks the official installer, it stops without replacing it.

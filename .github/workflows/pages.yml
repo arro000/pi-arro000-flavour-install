@@ -18,9 +18,18 @@ jobs:
           persist-credentials: false
       # v6.0.0
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
-      - run: cp torus.mjs packages.json site/
+      - name: Assemble site and render the README usage guide
+        run: |
+          cp torus.mjs packages.json site/
+          guide="$RUNNER_TEMP/usage"
+          awk '/^## Privacy and safety$/ {exit}
+               /^## Installation$/ {show=1} show' README.md > "$guide.md"
+          npm exec --yes --package=marked@18.3.0 -- \
+            marked -i "$guide.md" -o "$guide.html"
+          sed -i "/<!-- usage-guide -->/r $guide.html" site/index.html
       # v5.0.0
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+      - uses: >-
+          actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
         with:
           path: site
   deploy:

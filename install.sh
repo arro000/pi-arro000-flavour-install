@@ -10,12 +10,11 @@ if [[ $# != 0 ]]; then
   exit 2
 fi
 if [[ $EUID == 0 || $(uname -s) != Linux && $(uname -s) != Darwin ]]; then
-  echo 'Run as a regular user on Linux or macOS.' >&2
+  echo 'Run as a regular user on Linux, macOS or Android (Termux).' >&2
   exit 1
 fi
-command -v curl >/dev/null || { echo 'curl is required.' >&2; exit 1; }
 
-# npm links its bin into .bin; resolve that link before looking for the JS entrypoint.
+# Resolve symlinks before looking for the JS entrypoint.
 entry=${BASH_SOURCE[0]}
 while [[ -L $entry ]]; do
   target=$(readlink "$entry")
@@ -23,6 +22,13 @@ while [[ -L $entry ]]; do
 done
 dir=$(cd -- "$(dirname -- "$entry")" && pwd -P)
 
+if [[ -n ${PREFIX:-} && -x $PREFIX/bin/pkg && -x $PREFIX/bin/termux-info ]]; then
+  # Termux needs its Android build of Node, not the Linux builds from fnm.
+  "$PREFIX/bin/pkg" install -y nodejs npm git </dev/null
+  exec "$PREFIX/bin/node" "$dir/installer.mjs" --termux
+fi
+
+command -v curl >/dev/null || { echo 'curl is required.' >&2; exit 1; }
 fnm=$(command -v fnm || true)
 if [[ -z $fnm ]]; then
   case $(uname -s) in

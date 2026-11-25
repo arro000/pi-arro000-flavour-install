@@ -4,7 +4,7 @@
   "description": "Non-interactive installer for arro000’s Pi setup",
   "license": "MIT",
   "repository": "github:arro000/pi-arro000-flavour-install",
-  "bin": "./install.sh",
-  "files": ["install.sh", "installer.mjs", "torus.mjs", "packages.json", "pi-settings.json", "open-tui.json"],
+  "bin": "./launch.mjs",
+  "files": ["launch.mjs", "install.sh", "install.ps1", "installer.mjs", "torus.mjs", "rtk.mjs", "packages.json", "pi-settings.json", "open-tui.json"],
   "scripts": { "test": "bash test.sh" }
 }

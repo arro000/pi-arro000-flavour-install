@@ -2,24 +2,32 @@ import { spawn } from 'node:child_process';
 import { constants, existsSync } from 'node:fs';
 import { access, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { stripVTControlCharacters } from 'node:util';
+import { setupRtk } from './rtk.mjs';
 import { height, torus } from './torus.mjs';
 
 const bundled = async name => JSON.parse(await readFile(new URL(name, import.meta.url), 'utf8'));
 const packages = await bundled('packages.json');
 const agent = resolve(process.env.PI_CODING_AGENT_DIR || join(homedir(), '.pi', 'agent'));
-const pi = join(agent, 'bin', 'pi');
-const managed = existsSync(join(agent, 'install', 'managed-install.json'));
-const env = { ...process.env, PATH: `${dirname(pi)}:${process.env.PATH}`,
+const windows = process.platform === 'win32';
+const termux = process.argv[2] === '--termux';
+const npmInstall = windows || termux;
+const prefix = join(agent, 'flavour-pi');
+const tools = join(agent, 'flavour-bin');
+const piPackage = '@earendil-works/pi-coding-agent';
+const modules = windows ? ['node_modules'] : ['lib', 'node_modules'];
+const pi = npmInstall ? join(prefix, ...modules, piPackage, 'dist', 'bundle', 'cli.js') : join(agent, 'bin', 'pi');
+const managed = !npmInstall && existsSync(join(agent, 'install', 'managed-install.json'));
+const env = { ...process.env, PATH: `${tools}${delimiter}${join(agent, 'bin')}${delimiter}${process.env.PATH}`,
   PI_CODING_AGENT_DIR: agent, PI_LEGACY_INSTALL: '0', CI: 'true' };
 // A parent Pi session can export a managed root unrelated to the target agent.
 delete env.PI_MANAGED_INSTALL_ROOT;
 const screen = process.stderr;
 const animated = screen.isTTY && process.env.TERM !== 'dumb' && screen.columns >= 68 && screen.rows >= 16;
-const total = packages.length + 2;
+let total = packages.length + 3;
 const lines = [];
 let child, interrupted, frame = 0, done = 0;
 
@@ -46,26 +54,33 @@ for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
   process.on(signal, () => {
     interrupted = code;
     if (child?.pid) {
-      try { process.kill(-child.pid, signal); }
+      try { if (windows) child.kill(signal); else process.kill(-child.pid, signal); }
       catch (error) { if (error.code !== 'ESRCH') log(error.message); }
     }
   });
 }
 
-function run(command, args) {
+function run(command, args, capture = false) {
   if (interrupted) throw new Error('Installation interrupted');
   return new Promise((resolve, reject) => {
     // No controlling terminal: the official installer uses /dev/tty for its menus.
-    child = spawn(command, args, { env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
-    for (const input of [child.stdout, child.stderr]) createInterface({ input }).on('line', log);
+    child = spawn(command, args, { env, detached: !windows, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = '';
+    createInterface({ input: child.stdout }).on('line', line => {
+      if (capture) output += `${line}\n`;
+      log(line);
+    });
+    createInterface({ input: child.stderr }).on('line', log);
     child.once('error', reject);
     child.once('close', (code, signal) => {
       child = undefined;
-      if (code === 0 && !interrupted) resolve();
+      if (code === 0 && !interrupted) resolve(output);
       else reject(Object.assign(new Error(`${command} exited with ${signal || code}`), { code }));
     });
   });
 }
+
+const runPi = args => npmInstall ? run(process.execPath, [pi, ...args]) : run(pi, args);
 
 async function step(label, action) {
   log(`[${done + 1}/${total}] ${label}`);
@@ -107,6 +122,15 @@ async function apply(path, preset) {
   }
 }
 
+// A configured source can be an object with filters or a version-pinned npm spec.
+function npmSources(settings) {
+  return new Map((settings.packages ?? []).flatMap(entry => {
+    const source = typeof entry === 'string' ? entry : entry?.source;
+    const name = /^npm:(@[^/]+\/[^@]+|[^@]+)(?:@.+)?$/.exec(source)?.[1];
+    return name ? [[`npm:${name}`, source]] : [];
+  }));
+}
+
 let timer;
 try {
   if (animated) {
@@ -114,9 +138,19 @@ try {
     draw();
     timer = setInterval(draw, 100);
   }
-  for (const file of ['settings.json', 'open-tui.json']) await settings(join(agent, file));
-  await step(managed ? 'Update managed Pi' : 'Install Pi', async () => {
-    if (managed) await run(pi, ['update', '--self', '--no-approve']);
+  const configured = npmSources(await settings(join(agent, 'settings.json')));
+  const tui = join(agent, 'open-tui.json');
+  await settings(tui);
+  const initialized = existsSync(tui) && configured.has('npm:pi-open-tui') && configured.has('npm:@arro000/pi-monokai-contrast');
+  if (initialized) total--;
+  const piStep = npmInstall ? 'Install or update Pi via npm' : managed ? 'Update managed Pi' : 'Install Pi';
+  await step(piStep, async () => {
+    if (npmInstall) {
+      const npmRoot = termux ? join(process.env.PREFIX, 'lib') : dirname(process.execPath);
+      const npm = join(npmRoot, 'node_modules', 'npm', 'bin', 'npm-cli.js');
+      await run(process.execPath, [npm, 'install', '--global', '--prefix', prefix, '--ignore-scripts',
+        '--no-fund', '--no-audit', `${piPackage}@latest`]);
+    } else if (managed) await runPi(['update', '--self', '--no-approve']);
     else {
       const temp = await mkdtemp(join(tmpdir(), 'pi-flavour-'));
       try {
@@ -127,11 +161,16 @@ try {
         await rm(temp, { recursive: true, force: true });
       }
     }
-    await access(pi, constants.X_OK);
-    await run(pi, ['--version']);
+    await access(pi, npmInstall ? constants.R_OK : constants.X_OK);
+    await runPi(['--version']);
   });
-  for (const source of packages) await step(`Install ${source}`, () => run(pi, ['install', source, '--no-approve']));
-  await step('Apply Pi and Open TUI settings', async () => {
+  await step('Install or update RTK', () => setupRtk(tools, termux, run, log));
+  for (const source of packages) {
+    const existing = configured.get(source);
+    await step(`${existing ? 'Update' : 'Install'} ${source}`,
+      () => runPi([existing ? 'update' : 'install', existing ?? source, '--no-approve']));
+  }
+  if (!initialized) await step('Apply Pi and Open TUI settings', async () => {
     await mkdir(agent, { recursive: true });
     await apply(join(agent, 'settings.json'), await bundled('pi-settings.json'));
     await apply(join(agent, 'open-tui.json'), await bundled('open-tui.json'));
@@ -150,7 +189,13 @@ try {
 }
 
 if (!process.exitCode) {
-  const quote = value => "'" + value.replaceAll("'", "'\"'\"'") + "'";
-  console.log(`[100%] Pi and ${packages.length} packages ready.`);
-  console.log(`Launch: ${quote(process.argv[2])} exec --using=default ${quote(pi)}`);
+  const quote = value => "'" + value.replaceAll("'", windows ? "''" : "'\"'\"'") + "'";
+  let launch = `node ${quote(pi)}`;
+  if (!termux) {
+    const fnm = quote(process.argv[2]);
+    launch = `${windows ? '& ' : ''}${fnm} exec --using=default ${windows ? 'node ' : ''}${quote(pi)}`;
+  }
+  launch = windows ? `$env:Path = ${quote(`${tools};`)} + $env:Path; ${launch}`
+    : `PATH=${quote(tools)}:"$PATH" ${launch}`;
+  process.stdout.write(`[100%] Pi and ${packages.length} packages ready.\nLaunch: ${launch}\n`);
 }

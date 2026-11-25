@@ -20,7 +20,9 @@
   h2 { color: #fd971f; font-size: 1rem; }
   p { margin: .4rem 0; }
   figure { margin: 2rem 0; }
-  pre { margin: 0; color: #a6e22e; font: clamp(.58rem, 2.45vw, 1rem)/1.1 monospace; }
+  #torus { margin: 0; color: #a6e22e; font: clamp(.58rem, 2.45vw, 1rem)/1.1 monospace; }
+  .guide pre { overflow-x: auto; padding: .65rem; background: #272822; }
+  .guide { margin-top: 2rem; }
   button { background: transparent; border: 1px solid #75715e; color: #f8f8f2; font: inherit; }
   a { color: #66d9ef; }
   ul { padding-left: 1.2em; overflow-wrap: anywhere; }
@@ -38,11 +40,15 @@
   </figure>
   <h2>What gets installed</h2>
   <ul id="packages">
-    <li>fnm + latest stable Node.js</li>
+    <li>Node.js (fnm or Termux packages)</li>
     <li>Pi coding agent</li>
+    <li>RTK OSS binary (supported desktops)</li>
     <li>Pi + Open TUI preferences</li>
   </ul>
   <noscript><a href="./packages.json">View the extension list</a></noscript>
+  <section class="guide" aria-label="Usage">
+<!-- usage-guide -->
+  </section>
 </main>
 <script type="module" src="./page.mjs"></script>
 </html>

@@ -1,0 +1,10 @@
+{
+  "name": "pi-arro000-flavour-install",
+  "version": "0.1.0",
+  "description": "Non-interactive installer for arro000’s Pi setup",
+  "license": "MIT",
+  "repository": "github:arro000/pi-arro000-flavour-install",
+  "bin": "./install.sh",
+  "files": ["install.sh", "installer.mjs", "torus.mjs", "packages.json", "pi-settings.json", "open-tui.json"],
+  "scripts": { "test": "bash test.sh" }
+}

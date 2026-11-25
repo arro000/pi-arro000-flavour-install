@@ -1,33 +1,44 @@
 <div align="center">
-  <h1>Pi arro000 flavour install</h1>
-  <p>L’ultima versione stabile di Pi e i 21 pacchetti globali di arro000, con un solo script Bash.</p>
+  <h1>Pi arro000 flavour</h1>
+  <p><strong>Install Pi with arro000’s extensions, theme and settings.</strong></p>
+
+  [![Linux and macOS](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-66D9EF?style=flat-square)](#requirements)
+  [![Node.js](https://img.shields.io/badge/runtime-Node.js-A6E22E?style=flat-square)](#installation)
+  [![MIT License](https://img.shields.io/badge/license-MIT-F92672?style=flat-square)](LICENSE)
 </div>
 
-## Installazione
+## Highlights
 
-Per **Linux e macOS**. Servono Bash, `curl` e una connessione a Internet. Se manca una versione compatibile di Node.js, l’installer ufficiale propone come installarla.
+- **Hands-off setup:** installs the latest stable Node.js with [fnm](https://github.com/Schniz/fnm), sets it as fnm’s default, and installs or updates managed Pi without prompts.
+- **Live progress:** a rotating ASCII torus fills as each step completes, alongside live logs. Small or redirected terminals get plain text.
+- **Curated setup:** installs [21 Pi packages](packages.json) and applies the [Pi](pi-settings.json) and [Open TUI](open-tui.json) presets.
 
-```bash
-curl -fsSLo pi-arro000-install.sh https://raw.githubusercontent.com/arro000/pi-arro000-flavour-install/main/install.sh
-# Leggi il file scaricato prima di eseguirlo.
-bash pi-arro000-install.sh
+## Requirements
+
+Linux or macOS, a regular user account, internet access, Bash and `curl`. Installing fnm also requires `unzip`.
+
+## Installation
+
+If `npx` is already available (requires Git; runs directly from GitHub, not the npm registry):
+
+```sh
+npx --yes github:arro000/pi-arro000-flavour-install
 ```
 
-Accetta l’installazione o la reinstallazione nel menu ufficiale. Se chiede di avviare Pi subito, rispondi **n**: i pacchetti vengono installati dopo. Al termine esegui `pi`; se non è ancora nel `PATH`, usa il percorso mostrato dallo script o riapri il terminale dopo aver accettato la modifica del `PATH`.
+Without Node or npm, download and extract the [source archive](https://github.com/arro000/pi-arro000-flavour-install/archive/refs/heads/main.tar.gz), then run this from the extracted directory:
 
-## Cosa fa
-
-- Scarica ed esegue l’[installer ufficiale di Pi](https://pi.dev/install.sh), che sceglie l’ultima release stabile disponibile.
-- Installa in sequenza i [21 pacchetti npm](install.sh) con `pi install`. I pacchetti non sono vincolati a versioni fisse.
-- Mostra un toroide ASCII rotante: la parte piena cresce a ogni passaggio completato. Il menu ufficiale mantiene il controllo del terminale mentre è attivo. Su terminali piccoli o con output reindirizzato lo script usa messaggi di testo.
-
-Lo script si ferma al primo errore e non annulla i passaggi già riusciti. Non copia login, chiavi, sessioni, modelli o configurazioni personali. Alcuni pacchetti possono richiedere configurazioni o strumenti esterni per funzionare. I pacchetti Pi possono eseguire codice: verifica quelli elencati prima di installarli. Per accedere a un provider usa `/login` dentro Pi.
-
-## Verifica locale
-
-```bash
-bash -n install.sh
-bash test.sh
+```sh
+bash install.sh
 ```
 
-Il test simula il download e le installazioni senza usare la rete o la configurazione reale di Pi. Lo script è sotto licenza [MIT](LICENSE); Pi e i pacchetti mantengono le proprie licenze.
+Use the launch command printed at the end. Shell profiles are not modified. Run the installer again to update managed Pi. If an unsupported Pi installation blocks the official installer, it stops without replacing it.
+
+## Privacy and safety
+
+Close Pi before running the installer. The presets replace matching settings and keep unrelated values. No credentials, sessions, device IDs or trust decisions are bundled. Sign in separately with `/login`; access to the configured model depends on your account. Review the package list first: Pi extensions can execute code. A failed run stops without rolling back completed steps.
+
+## Development
+
+Run `bash test.sh` for the offline installer checks. The [Pages source](site/) reuses the terminal renderer and package list. To deploy, select **GitHub Actions** under **Settings → Pages** and run the [Pages workflow](.github/workflows/pages.yml).
+
+[MIT](LICENSE) · Pi and its extensions retain their own licenses.

@@ -1,0 +1,23 @@
+[
+  "npm:@aliou/pi-guardrails",
+  "npm:pi-goal-x",
+  "npm:pi-autoresearch",
+  "npm:better-custom",
+  "npm:pi-web-access",
+  "npm:@juicesharp/rpiv-ask-user-question",
+  "npm:@ff-labs/pi-fff",
+  "npm:pi-rtk-optimizer",
+  "npm:pi-lens",
+  "npm:pi-extmgr",
+  "npm:@dietrichgebert/ponytail",
+  "npm:@quintinshaw/pi-dynamic-workflows",
+  "npm:pi-codex-status",
+  "npm:pi-subagents",
+  "npm:pi-simplify",
+  "npm:@tmustier/pi-usage-extension",
+  "npm:pi-btw",
+  "npm:pi-terminal-theme",
+  "npm:pi-tool-display",
+  "npm:pi-open-tui",
+  "npm:@arro000/pi-monokai-contrast"
+]

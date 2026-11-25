@@ -102,9 +102,9 @@ chmod +x "$work/bin/curl"
 # npm's bin points to the Node launcher through a symlink.
 ln -s "$PWD/launch.mjs" "$work/bin/pi-arro000-flavour-install"
 pi-arro000-flavour-install > "$work/log" 2>&1 || { cat "$work/log"; exit 1; }
-grep -Fq '[100%] Pi and 22 packages ready.' "$work/log"
+grep -Fq '[100%] Pi and 20 packages ready.' "$work/log"
 [[ $(cat "$HOME/actions") == $'node-install\nnode-default\ninstaller' ]]
-[[ $(sort -u "$HOME/packages" | wc -l) -eq 22 ]]
+[[ $(sort -u "$HOME/packages" | wc -l) -eq 20 ]]
 "$node_bin" --input-type=module <<'JS'
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -129,7 +129,7 @@ const path = `${dir}/settings.json`;
 const settings = JSON.parse(readFileSync(path));
 settings.theme = 'my-theme';
 settings.packages = JSON.parse(readFileSync('packages.json')).filter(source => source !== 'npm:pi-intercom');
-settings.packages[0] = { source: `${settings.packages[0]}@1.2.3`, extensions: [] };
+settings.packages.push({ source: 'npm:@aliou/pi-guardrails@1.2.3', extensions: [] });
 writeFileSync(path, JSON.stringify(settings));
 writeFileSync(`${dir}/open-tui.json`, '{"header":true}');
 JS
@@ -141,8 +141,9 @@ cp "$PI_CODING_AGENT_DIR/open-tui.json" "$work/tui-before"
 rm "$HOME/packages"
 bash install.sh > "$work/log" 2>&1
 [[ $(tail -n 3 "$HOME/actions") == $'node-install\nnode-default\nupdate' ]]
-[[ $(grep -c '^update ' "$HOME/packages") -eq 21 ]]
+[[ $(grep -c '^update ' "$HOME/packages") -eq 20 ]]
 grep -Fxq 'update npm:@aliou/pi-guardrails@1.2.3' "$HOME/packages"
+! grep -Fxq 'install npm:@aliou/pi-guardrails' "$HOME/packages"
 grep -Fxq 'install npm:pi-intercom' "$HOME/packages"
 [[ $(grep -c '^install ' "$HOME/packages") -eq 1 ]]
 cmp "$work/pi-before" "$PI_CODING_AGENT_DIR/settings.json"
@@ -176,7 +177,7 @@ JS
 rm "$HOME/packages"
 status=0
 FAIL_PACKAGE=npm:pi-goal-x bash install.sh > "$work/log" 2>&1 || status=$?
-[[ $status -eq 42 && $(wc -l < "$HOME/packages") -eq 2 ]]
+[[ $status -eq 42 && $(wc -l < "$HOME/packages") -eq 1 ]]
 ! grep -Fq '100%' "$work/log"
 printf '%s\n' 'not JSON' > "$PI_CODING_AGENT_DIR/open-tui.json"
 status=0
@@ -202,7 +203,7 @@ MOCK
   : > "$HOME/sudo-actions"
   FAIL_NODE=1 bash install.sh > "$work/log" 2>&1
   grep -Fq 'Installing libatomic1 with sudo' "$work/log"
-  grep -Fq '[100%] Pi and 22 packages ready.' "$work/log"
+  grep -Fq '[100%] Pi and 21 packages ready.' "$work/log"
   [[ $(cat "$HOME/sudo-actions") == $'apt-get update\napt-get install -y libatomic1' ]]
 fi
 [[ $(bash -ic 'command -v pi' 2>/dev/null) == "$PI_CODING_AGENT_DIR/flavour-bin/pi" ]]
@@ -211,11 +212,17 @@ grep -Fq 'pi-arro000-flavour' "$HOME/.bashrc"
 [[ $(command -v pi-flavour-uninstall) == "$HOME/.local/bin/pi-flavour-uninstall" ]]
 "$PI_CODING_AGENT_DIR/flavour-bin/pi" --version | grep -Fxq 9.8.7
 "$PI_CODING_AGENT_DIR/flavour-bin/pi-flavour-uninstall" > "$work/log" 2>&1 || { cat "$work/log"; exit 1; }
-[[ $(wc -l < "$HOME/removed") -eq 22 ]]
+[[ $(wc -l < "$HOME/removed") -eq 20 ]]
 [[ ! -L $HOME/.local/bin/pi && ! -L $HOME/.local/bin/pi-flavour-uninstall ]]
 [[ ! -e $PI_CODING_AGENT_DIR/install && ! -e $PI_CODING_AGENT_DIR/bin/pi ]]
 [[ -f $PI_CODING_AGENT_DIR/settings.json && -x $FNM_DIR/fnm ]]
 ! grep -Fq 'pi-arro000-flavour' "$HOME/.bashrc"
+# A fresh interactive run installs Guardrails only after an explicit yes.
+export PI_CODING_AGENT_DIR="$work/optional-agent"
+: > "$HOME/packages"
+printf 'yes\n' | NODE_OPTIONS="$NODE_OPTIONS --import=$work/tty-mock.mjs" bash install.sh > "$work/log" 2>&1
+grep -Fq 'Install the optional Guardrails extension' "$work/log"
+grep -Fxq 'install npm:@aliou/pi-guardrails' "$HOME/packages"
 printf 'Installer tests passed.\n'
 
 # Model Termux's pkg + npm layout without installing anything on the host.
@@ -248,6 +255,6 @@ else {
 MOCK
 bash install.sh > "$work/log" 2>&1 || { cat "$work/log"; exit 1; }
 [[ $(tail -n 1 "$HOME/actions") == termux-node ]]
-[[ $(wc -l < "$HOME/termux-packages") -eq 22 ]]
+[[ $(wc -l < "$HOME/termux-packages") -eq 20 ]]
 grep -Fq 'Run pi (open a new shell if needed)' "$work/log"
 printf 'Termux bootstrap test passed.\n'

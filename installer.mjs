@@ -12,6 +12,7 @@ import { height, torus } from './torus.mjs';
 
 const bundled = async name => JSON.parse(await readFile(new URL(name, import.meta.url), 'utf8'));
 const packages = await bundled('packages.json');
+const guardrails = 'npm:@aliou/pi-guardrails';
 const agent = resolve(process.env.PI_CODING_AGENT_DIR || join(homedir(), '.pi', 'agent'));
 const windows = process.platform === 'win32';
 const termux = process.argv[2] === '--termux';
@@ -133,14 +134,14 @@ function npmSources(settings) {
   }));
 }
 
-async function confirmPresets() {
+async function confirm(question) {
   if (!process.stdin.isTTY || !screen.isTTY) return false;
   prompt = createInterface({ input: process.stdin, output: screen });
   try {
     const answer = await new Promise(resolve => {
       prompt.once('close', () => resolve(''));
       prompt.once('SIGINT', () => { interrupted = 130; prompt.close(); });
-      prompt.question('Apply the bundled RTK and Open TUI presets? Matching settings will be replaced. [y/N] ', resolve);
+      prompt.question(`${question} [y/N] `, resolve);
     });
     return /^y(?:es)?$/i.test(answer.trim());
   } finally {
@@ -156,7 +157,12 @@ try {
   const rtkSettings = join(agent, 'extensions', 'pi-rtk-optimizer', 'config.json');
   const initialized = existsSync(tui) && configured.has('npm:pi-open-tui') && configured.has('npm:@arro000/pi-monokai-contrast');
   const updating = managed || existsSync(pi) || initialized;
-  const applyPresets = !updating || await confirmPresets();
+  const applyPresets = !updating || await confirm('Apply the bundled RTK and Open TUI presets? Matching settings will be replaced.');
+  if (interrupted) throw new Error('Installation interrupted');
+  if (configured.has(guardrails) || await confirm('Install the optional Guardrails extension (@aliou/pi-guardrails)?')) {
+    packages.push(guardrails);
+    total++;
+  }
   if (interrupted) throw new Error('Installation interrupted');
   if (!applyPresets) total--;
   await settings(tui);

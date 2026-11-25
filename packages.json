@@ -1,5 +1,4 @@
 [
-  "npm:@aliou/pi-guardrails",
   "npm:pi-goal-x",
   "npm:pi-autoresearch",
   "npm:better-custom",
@@ -11,7 +10,6 @@
   "npm:pi-extmgr",
   "npm:@dietrichgebert/ponytail",
   "npm:@quintinshaw/pi-dynamic-workflows",
-  "npm:pi-codex-status",
   "npm:pi-subagents",
   "npm:pi-simplify",
   "npm:@tmustier/pi-usage-extension",

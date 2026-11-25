@@ -11,7 +11,7 @@
 
 - **Hands-off setup:** installs Node.js and Pi without prompts, using [fnm](https://github.com/Schniz/fnm) on desktop and Termux packages on Android.
 - **Live progress:** a rotating ASCII torus fills as each step completes, alongside live logs. Small or redirected terminals get plain text.
-- **Curated setup:** installs [22 Pi packages](packages.json), including `pi-intercom`, and applies the [Pi](pi-settings.json) and [Open TUI](open-tui.json) presets.
+- **Curated setup:** installs [20 Pi packages](packages.json), including `pi-intercom`, and applies the [Pi](pi-settings.json) and [Open TUI](open-tui.json) presets.
 - **RTK:** installs the [RTK OSS](https://github.com/rtk-ai/rtk) binary on supported desktop systems for `pi-rtk-optimizer`. The [RTK preset](rtk-settings.json) compacts build, test and lint output without rewriting commands or compacting file reads.
 
 ## Requirements
@@ -76,6 +76,8 @@ pkg install -y git &&
 ```
 
 Termux uses its native `nodejs` and `npm` packages instead of fnm. Windows and Termux install Pi in a dedicated npm prefix without replacing other Pi binaries. The installer adds its launcher directory to Bash and Zsh startup files or to the Windows user PATH. On Linux and macOS, if `~/.local/bin` is already on `PATH`, the installer also links the commands there without replacing existing files. Open a new shell if `pi` is not found. For direct SBX execution without shell startup files, use `sbx exec <sandbox> pi --version` when `~/.local/bin` is on the sandbox PATH, or use the absolute launch path printed by the installer. RTK has no upstream Android binary; Termux can use an existing `rtk` on `PATH` if you have one. Other native extensions may also have platform-specific limits.
+
+Guardrails (`@aliou/pi-guardrails`) is optional. If it is not already configured, the installer asks whether to add it. The default is **No**; non-interactive runs skip it. If it is already configured, it is updated without asking. After opting in, run `/guardrails:onboarding` in Pi to configure its rules.
 
 ## Updating
 
